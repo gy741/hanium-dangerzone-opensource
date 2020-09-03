@@ -75,8 +75,8 @@ def index(request):
         # return render(request, 'fileupload.html', {'file_url': file_url})
         fn = 'safe-output-compressed.pdf'
         jn = 'virustotal-output.json'
-        virustotal_download(virustotal_resource_id,jn)
-        return pdf_view(request,fn)
+        return virustotal_download(virustotal_resource_id,jn)
+        # return pdf_view(request,fn)
     else:
         return render(request, 'index.html')
 
