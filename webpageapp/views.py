@@ -74,7 +74,8 @@ def index(request):
             print(rm_file,"is deleted")
         # return render(request, 'fileupload.html', {'file_url': file_url})
         fn = 'safe-output-compressed.pdf'
-        virustotal_download(virustotal_resource_id)
+        jn = 'virustotal-output.json'
+        virustotal_download(virustotal_resource_id,jn)
         return pdf_view(request,fn)
     else:
         return render(request, 'index.html')
@@ -97,11 +98,23 @@ def virustotal_upload(orgfile):
     response = requests.post(url, files=files, params=params)
     return response.json()['resource']
 
-def virustotal_download(resource_id):
+def virustotal_download(resource_id, jn):
+    fs = FileSystemStorage()
+    filename = 'my_folder/' + jn
     url = 'https://www.virustotal.com/vtapi/v2/file/report'
     params = {'apikey': '4fa229bcb533fedf00e80a7a8023da8fa6f8a2be56d574aceacb8ac3671ddf36', 'resource': resource_id}
     response = requests.get('https://www.virustotal.com/vtapi/v2/file/report', params=params)
-    print(response.json())
+    
+    if fs.exists(filename):
+        
+        with fs.open(filename, 'w') as json_file:
+            json.dump(response.json(), json_file, indent = 4, sort_keys=True)
+            response = HttpResponse(json_file, content_type='application/json')
+            response['Content-Disposition'] = 'attachment; filename="virustotal.json"'
+            return response
+    else:
+        return HttpResponseNotFound('Not Found!!!')
+
 
 
 @csrf_exempt
