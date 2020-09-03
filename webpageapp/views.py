@@ -1,17 +1,13 @@
 from django.shortcuts import render
-import os, shutil
-import subprocess
+import os, shutil, requests, subprocess, datetime
 from werkzeug.utils import secure_filename
 from django.http import HttpResponseRedirect
 from django.core.files.storage import FileSystemStorage
 from .forms import UploadDocumentForm
 from django.core.files.storage import FileSystemStorage
-import datetime
 from django import get_version
 from django.http import FileResponse, HttpResponse, HttpResponseNotFound
 from django.views.decorators.csrf import csrf_exempt
-import requests
-
 
 
 g_number_of_visitor = {'8-30':30}
@@ -64,7 +60,7 @@ def index(request):
         print('file_url: ',file_url)
         path = '/home/ubuntu/hanium-dangerzone-opensource/media/my_folder/'
         uploadpath = " " + path + filename + " "
-        virustotal(uploadpath)
+        virustotal_resource_id = virustotal_upload(uploadpath)
         subprocess.call(["/usr/bin/dangerzone-container" " documenttopixels --document-filename" + uploadpath + "--pixel-dir /tmp/dangerzone-pixel --container-name flmcode/dangerzone"],shell=True)
         subprocess.call(["/usr/bin/dangerzone-container" " pixelstopdf --pixel-dir /tmp/dangerzone-pixel --safe-dir /tmp/dangerzone-safe --container-name flmcode/dangerzone --ocr 0 --ocr-lang eng"],shell=True)
         #os.rename("/tmp/dangerzone-safe/safe-output-compressed.pdf",
@@ -78,6 +74,7 @@ def index(request):
             print(rm_file,"is deleted")
         # return render(request, 'fileupload.html', {'file_url': file_url})
         fn = 'safe-output-compressed.pdf'
+        virustotal_download(virustotal_resource_id)
         return pdf_view(request,fn)
     else:
         return render(request, 'index.html')
@@ -93,12 +90,19 @@ def pdf_view(request, fn):
     else:
         return HttpResponseNotFound('Not Found!!!')
     
-def virustotal(request):
-    url = 'https://www.virustotal.com/api/v3/files'
-    params = {'x-apikey': '4fa229bcb533fedf00e80a7a8023da8fa6f8a2be56d574aceacb8ac3671ddf36'}
-    files = {'file': (request, open(request, 'rb'))}
+def virustotal_upload(orgfile):
+    url = 'https://www.virustotal.com/vtapi/v2/file/scan'
+    params = {'apikey': '4fa229bcb533fedf00e80a7a8023da8fa6f8a2be56d574aceacb8ac3671ddf36'}
+    files = {'file': "'" + orgfile + "'"}
     response = requests.post(url, files=files, params=params)
+    return response.json()['resource']
+
+def virustotal_download(resource_id):
+    url = 'https://www.virustotal.com/vtapi/v2/file/report'
+    params = {'apikey': '4fa229bcb533fedf00e80a7a8023da8fa6f8a2be56d574aceacb8ac3671ddf36', 'resource': resource_id}
+    response = requests.get('https://www.virustotal.com/vtapi/v2/file/report', params=params)
     print(response.json())
+
 
 @csrf_exempt
 def contact(request):
