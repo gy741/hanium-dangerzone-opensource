@@ -1,5 +1,5 @@
+import os, shutil, requests, subprocess, datetime, json, zipstream
 from django.shortcuts import render
-import os, shutil, requests, subprocess, datetime, json
 from werkzeug.utils import secure_filename
 from django.http import HttpResponseRedirect
 from django.core.files.storage import FileSystemStorage
@@ -75,11 +75,34 @@ def index(request):
         # return render(request, 'fileupload.html', {'file_url': file_url})
         fn = 'safe-output-compressed.pdf'
         jn = 'virustotal-output.json'
-        return virustotal_download(virustotal_resource_id,jn)
-        # return pdf_view(request,fn)
+        virustotal_download(virustotal_resource_id,jn)
+        return pdf_view(request,fn, jn)
     else:
         return render(request, 'index.html')
+    
+def pdf_view(request, fn, jn):
+    fs = FileSystemStorage()
+    pdf_filename = 'my_folder/' + fn
+    json_filename = 'my_folder/' + jn
+    
+    if fs.exists(pdf_filename):
+        
+        if fs.exists(json_filename):
+            z = zipstream.ZipFile()
+            z.write(pdf_filename)
+            z.write(json_filename)
+            zip_filename = pdf_filename + json_filename + '.zip'
+            with open(zip_filename, 'wb') as f:
+                for data in z:
+                    f.write(data)
+            response = HttpResponse(zip_filename, content_type='application/zip')
+            response['Content-Disposition'] = 'attachment; filename="safe.zip"'
+            return response
 
+    else:
+        return HttpResponseNotFound('Not Found!!!')
+    
+"""
 def pdf_view(request, fn):
     fs = FileSystemStorage()
     filename = 'my_folder/' + fn
@@ -90,7 +113,7 @@ def pdf_view(request, fn):
             return response
     else:
         return HttpResponseNotFound('Not Found!!!')
-    
+"""
 def virustotal_upload(orgfile):
     url = 'https://www.virustotal.com/vtapi/v2/file/scan'
     params = {'apikey': '4fa229bcb533fedf00e80a7a8023da8fa6f8a2be56d574aceacb8ac3671ddf36'}
@@ -98,6 +121,19 @@ def virustotal_upload(orgfile):
     response = requests.post(url, files=files, params=params)
     return response.json()['resource']
 
+def virustotal_download(resource_id, jn):
+    fs = FileSystemStorage()
+    filename = 'my_folder/' + jn
+    url = 'https://www.virustotal.com/vtapi/v2/file/report'
+    params = {'apikey': '4fa229bcb533fedf00e80a7a8023da8fa6f8a2be56d574aceacb8ac3671ddf36', 'resource': resource_id}
+    response = requests.get('https://www.virustotal.com/vtapi/v2/file/report', params=params)
+    
+    if fs.exists(filename):
+        with fs.open(filename, 'w') as json_file:
+            json.dump(response.json(), json_file, indent = 4, sort_keys=True)
+
+    
+"""
 def virustotal_download(resource_id, jn):
     fs = FileSystemStorage()
     filename = 'my_folder/' + jn
@@ -114,7 +150,7 @@ def virustotal_download(resource_id, jn):
             return response
     else:
         return HttpResponseNotFound('Not Found!!!')
-
+"""
 
 
 @csrf_exempt
