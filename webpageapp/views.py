@@ -73,31 +73,31 @@ def index(request):
             os.remove(rm_file)
             print(rm_file,"is deleted")
         # return render(request, 'fileupload.html', {'file_url': file_url})
-        fn = 'safe-output-compressed.pdf'
+        fn = path + 'safe-output-compressed.pdf'
         jn = path + 'virustotal-output.json'
         virustotal_download(virustotal_resource_id,jn)
-        return pdf_view(request,fn, jn)
+        return pdf_view(request, fn, jn)
     else:
         return render(request, 'index.html')
     
-def pdf_view(request, fn, jn):
+def pdf_view(request, pdf_filename, json_filename):
     fs = FileSystemStorage()
-    pdf_filename = 'my_folder/' + fn
-    json_filename = 'my_folder/' + jn
-    
     if fs.exists(pdf_filename):
-        
         if fs.exists(json_filename):
             z = zipstream.ZipFile()
-            z.write(pdf_filename)
-            z.write(json_filename)
+            z.write(pdf_filename ,  'safe-output-compressed.pdf')
+            z.write(json_filename ,'virustotal-output.json')
             zip_filename = 'test.zip'
-            with fs.open(zip_filename, 'wb') as f:
+            with open(zip_filename, 'wb') as f:
                 for data in z:
                     f.write(data)
-            response = HttpResponse(zip_filename, content_type='application/zip')
-            response['Content-Disposition'] = 'attachment; filename="safe.zip"'
+            response = HttpResponse(open(zip_filename, 'rb'), content_type='application/zip')
             return response
+        else:
+            with fs.open(pdf_filename) as pdf:
+                response = HttpResponse(pdf, content_type='application/pdf')
+                response['Content-Disposition'] = 'attachment; filename="safe.pdf"'
+                return response
 
     else:
         return HttpResponseNotFound('Not Found!!!')
@@ -114,6 +114,7 @@ def pdf_view(request, fn):
     else:
         return HttpResponseNotFound('Not Found!!!')
 """
+
 def virustotal_upload(orgfile):
     url = 'https://www.virustotal.com/vtapi/v2/file/scan'
     params = {'apikey': '4fa229bcb533fedf00e80a7a8023da8fa6f8a2be56d574aceacb8ac3671ddf36'}
