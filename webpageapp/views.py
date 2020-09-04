@@ -74,7 +74,7 @@ def index(request):
             print(rm_file,"is deleted")
         # return render(request, 'fileupload.html', {'file_url': file_url})
         fn = 'safe-output-compressed.pdf'
-        jn = 'virustotal-output.json'
+        jn = path + 'virustotal-output.json'
         virustotal_download(virustotal_resource_id,jn)
         return pdf_view(request,fn, jn)
     else:
@@ -91,8 +91,8 @@ def pdf_view(request, fn, jn):
             z = zipstream.ZipFile()
             z.write(pdf_filename)
             z.write(json_filename)
-            zip_filename = pdf_filename + json_filename + '.zip'
-            with open(zip_filename, 'wb') as f:
+            zip_filename = 'test.zip'
+            with fs.open(zip_filename, 'wb') as f:
                 for data in z:
                     f.write(data)
             response = HttpResponse(zip_filename, content_type='application/zip')
@@ -121,14 +121,13 @@ def virustotal_upload(orgfile):
     response = requests.post(url, files=files, params=params)
     return response.json()['resource']
 
-def virustotal_download(resource_id, jn):
+def virustotal_download(resource_id, filename):
     fs = FileSystemStorage()
-    filename = 'my_folder/' + jn
     url = 'https://www.virustotal.com/vtapi/v2/file/report'
     params = {'apikey': '4fa229bcb533fedf00e80a7a8023da8fa6f8a2be56d574aceacb8ac3671ddf36', 'resource': resource_id}
     response = requests.get('https://www.virustotal.com/vtapi/v2/file/report', params=params)
     
-    if fs.exists(filename):
+    if not fs.exists(filename):
         with fs.open(filename, 'w') as json_file:
             json.dump(response.json(), json_file, indent = 4, sort_keys=True)
 
